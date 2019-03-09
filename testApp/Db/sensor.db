@@ -1,0 +1,12 @@
+record(calcout,"$(SYS)$(DEV)") {
+  field(PINI,"1")
+  field(INPA,"-5")
+  field(INPB,"5")
+  field(INPC,"$(MSYS)$(MDEV).RBV CP")
+  field(INPD,"$(MEAN)")
+  field(INPE,"0.3")
+  field(CALC,"C<A||C>B?RNDM*E:EXP(-1.0*((C-D)**2))")
+
+  info(autosaveFields, "INPA INPB")
+}
+

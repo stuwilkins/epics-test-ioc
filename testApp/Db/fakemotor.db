@@ -1,0 +1,37 @@
+
+record(ao, "$(Sys)$(Dev)-SP") {
+    field(FLNK, "$(Sys)$(Dev)-SP_")
+}
+
+record(seq, "$(Sys)$(Dev)-SP_") {
+    #disable mtr rec processing
+    field(DOL1, "1")
+    field(LNK1, "$(Mtr).DISA")
+
+    # write setpoint to mtr rec
+    field(DLY2, "0.1")
+    field(DOL2, "$(Sys)$(Dev)-SP")
+    field(LNK2, "$(Mtr).VAL CP")
+
+    # to re-enable mtr rec processing, write or process "$(Sys)$(Dev)Cmd:Go-Cmd"
+}
+
+record(ai, "$(Sys)$(Dev)-I") {
+    field(INP, "$(Mtr).RBV CPP")
+}
+
+record(bo, "$(Sys)$(Dev)Cmd:Go-Cmd") {
+    field(DOL, "0")
+    field(OUT, "$(Mtr).DISA CPP")
+}
+
+record(bo, "$(Sys)$(Dev)Cmd:Stop-Cmd") {
+    field(VAL, "1")
+    field(OUT, "$(Mtr).STOP CPP")
+}
+
+record(bi, "$(Sys)$(Dev)Sts:Moving-Sts") {
+    field(INP, "$(Mtr).DMOV CPP")
+    field(ZNAM, "Moving")
+    field(ONAM, "Done")
+}

@@ -1,0 +1,13 @@
+file "db/sensor.db"
+{
+
+pattern
+{SYS,		       DEV,	        MEAN,       MSYS,            MDEV }
+{XF:31IDA-BI,  "{Dev:1}E-I",	1.5,    XF:31IDA-OP,    "{Tbl-Ax:X1}Mtr"}
+{XF:31IDA-BI,  "{Dev:2}E-I",	0.5,    XF:31IDA-OP,    "{Tbl-Ax:X2}Mtr"}
+{XF:31IDA-BI,  "{Dev:3}E-I",    -0.5,    XF:31IDA-OP,    "{Tbl-Ax:X3}Mtr"}
+{XF:31IDA-BI,  "{Dev:4}E-I",    -1.5,    XF:31IDA-OP,    "{Tbl-Ax:X4}Mtr"}
+{XF:31IDA-BI,  "{Dev:5}E-I",    -2.5,    XF:31IDA-OP,    "{Tbl-Ax:X5}Mtr"}
+{XF:31IDA-BI,  "{Dev:6}E-I",    -1.0,    XF:31IDA-OP,    "{Tbl-Ax:X6}Mtr"}
+
+}
