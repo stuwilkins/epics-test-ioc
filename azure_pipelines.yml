@@ -1,0 +1,28 @@
+trigger:
+- master
+
+jobs:
+- job: Linux
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'Ubuntu-16.04'
+  variables:
+    EPICS_HOST_ARCH: 'linux-x86_64'
+    EPICS_MODULES_URL: 'https://github.com/NSLS-II/epics-modules/releases/download/v0.1/epics-modules_0.1-1_amd64.deb'
+
+  steps:
+  - script: |
+      sudo apt-get -y install \
+        libreadline-dev libraw1394-11 \
+        perl re2c libboost-all-dev \
+        build-essential devscripts debhelper \
+    displayName: 'Install Packages'
+  
+  - script: |
+      wget -O epics-modules.deb $EPICS_MODULES_URL
+      sudo dpkg -i epics-modules.deb
+    displayName: 'Update git repos'
+    
+  - script: |
+      make 
+    displayName: 'Build'
