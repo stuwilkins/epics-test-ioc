@@ -19,7 +19,7 @@ jobs:
     displayName: 'Install Packages'
   
   - script: |
-      wget -O epics-modules.deb $EPICS_MODULES_URL
+      wget -O epics-modules.deb --quiet $EPICS_MODULES_URL
       sudo dpkg -i epics-modules.deb
     displayName: 'Update git repos'
     
