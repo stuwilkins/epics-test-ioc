@@ -26,3 +26,7 @@ jobs:
   - script: |
       make 
     displayName: 'Build'
+
+  - script: |
+      (cd ./iocBoot/iocMotorSim && ./st.cmd)
+    displayName: 'Run IOCs'
