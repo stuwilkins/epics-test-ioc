@@ -74,13 +74,15 @@ extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
 #define MAX_DIR_LEN 256
 
 #define TOP_PATH "."
-#define DBD_FILE "dbd/softIoc.dbd"
-#define EXIT_FILE "db/softIocExit.db"
+#define DB_BASE "/db"
+#define DBD_FILE "/dbd/softIoc.dbd"
+#define EXIT_FILE DB_BASE "/softIocExit.db"
 
 const char *arg0;
 const char *default_dbd_file = DBD_FILE;
 const char *default_exit_file = EXIT_FILE;
-const char *default_top_path = TOP_PATH;
+const char *default_db_file = DB_BASE;
+const char *top_path = TOP_PATH;
 
 static void exitSubroutine(subRecord *precord) {
     epicsExitLater((precord->a == 0.0) ? EXIT_SUCCESS : EXIT_FAILURE);
@@ -88,7 +90,7 @@ static void exitSubroutine(subRecord *precord) {
 
 static void usage(int status) {
     printf("Usage: %s [-T dir] [-D softIoc.dbd] [-h] [-S] [-a ascf]\n", arg0);
-    puts("\t[-m macro=value,macro2=value2] [-d file.db]");
+    puts("\t[-m macro=value,macro2=value2] [-d file.db] [-e file.db]");
     puts("\t[-x prefix] [st.cmd]");
     printf("\n");
     epicsExit(status);
@@ -99,9 +101,11 @@ int main(int argc, char *argv[])
 {
     char dbd_file[MAX_DIR_LEN];
     char exit_file[MAX_DIR_LEN];
-    char *topp = const_cast<char*>(default_top_path);
+    char _db_file[MAX_DIR_LEN];
+    char *topp = const_cast<char*>(top_path);
     char *base_dbd = const_cast<char*>(default_dbd_file);
     char *base_exit = const_cast<char*>(default_exit_file);
+    char *base_db = const_cast<char*>(default_db_file);
     char *macros = NULL;
     char xmacro[PVNAME_STRINGSZ + 4];
     int startIocsh = 1;    /* default = start shell */
@@ -147,11 +151,22 @@ int main(int argc, char *argv[])
     while (argc>1 && **argv == '-') {
         switch ((*argv)[1]) {
             case 'a':
-                if (macros) asSetSubstitutions(macros);
+                if (macros) {
+                    asSetSubstitutions(macros);
+                }
                 asSetFilename(*++argv);
                 --argc;
                 break;
 
+            case 'e':
+                epicsSnprintf(_db_file, MAX_DIR_LEN, "%s%s/%s", topp, base_db, *++argv);
+                if (dbLoadRecords(_db_file, macros)) {
+                    epicsExit(EXIT_FAILURE);
+                }
+                loadedDb = 1;
+                --argc;
+                break;
+                
             case 'd':
                 if (dbLoadRecords(*++argv, macros)) {
                     epicsExit(EXIT_FAILURE);
