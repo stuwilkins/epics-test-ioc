@@ -71,31 +71,37 @@
 
 extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
 
-#define EPICS_BASE "/opt/epics/epics_base"
-#define DBD_FILE EPICS_BASE "/dbd/softIoc.dbd"
-#define EXIT_FILE EPICS_BASE "/db/softIocExit.db"
+#define MAX_DIR_LEN 256
+
+#define TOP_PATH "."
+#define DBD_FILE "dbd/softIoc.dbd"
+#define EXIT_FILE "db/softIocExit.db"
 
 const char *arg0;
-const char *base_dbd = DBD_FILE;
-const char *exit_db = EXIT_FILE;
+const char *default_dbd_file = DBD_FILE;
+const char *default_exit_file = EXIT_FILE;
+const char *default_top_path = TOP_PATH;
 
 static void exitSubroutine(subRecord *precord) {
     epicsExitLater((precord->a == 0.0) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
 static void usage(int status) {
-    printf("Usage: %s [-D softIoc.dbd] [-h] [-S] [-a ascf]\n", arg0);
+    printf("Usage: %s [-T dir] [-D softIoc.dbd] [-h] [-S] [-a ascf]\n", arg0);
     puts("\t[-m macro=value,macro2=value2] [-d file.db]");
     puts("\t[-x prefix] [st.cmd]");
-    puts("Compiled-in path to softIoc.dbd is:");
-    printf("\t%s\n", base_dbd);
+    printf("\n");
     epicsExit(status);
 }
 
 
 int main(int argc, char *argv[])
 {
-    char *dbd_file = const_cast<char*>(base_dbd);
+    char dbd_file[MAX_DIR_LEN];
+    char exit_file[MAX_DIR_LEN];
+    char *topp = const_cast<char*>(default_top_path);
+    char *base_dbd = const_cast<char*>(default_dbd_file);
+    char *base_exit = const_cast<char*>(default_exit_file);
     char *macros = NULL;
     char xmacro[PVNAME_STRINGSZ + 4];
     int startIocsh = 1;    /* default = start shell */
@@ -103,130 +109,144 @@ int main(int argc, char *argv[])
     
     arg0 = strrchr(*argv, '/');
     if (!arg0) {
-    arg0 = *argv;
+        arg0 = *argv;
     } else {
-    ++arg0;    /* skip the '/' */
+        ++arg0;    /* skip the '/' */
     }
     
     --argc, ++argv;
     
     /* Do this here in case the dbd file not available */
     if (argc>0 && **argv=='-' && (*argv)[1]=='h') {
-    usage(EXIT_SUCCESS);
+        usage(EXIT_SUCCESS);
+    }
+
+    /* Get the top path for all files */
+    if (argc>1 && **argv=='-' && (*argv)[1]=='T') {
+        topp = *++argv;
+        argc -= 2;
+        ++argv;
     }
     
     if (argc>1 && **argv=='-' && (*argv)[1]=='D') {
-    dbd_file = *++argv;
-    argc -= 2;
-    ++argv;
+        base_dbd = *++argv;
+        argc -= 2;
+        ++argv;
     }
+
+    epicsSnprintf(dbd_file, MAX_DIR_LEN, "%s/%s", topp, base_dbd);
+    epicsSnprintf(exit_file, MAX_DIR_LEN, "%s/%s", topp, base_exit);
     
     if (dbLoadDatabase(dbd_file, NULL, NULL)) {
-    epicsExit(EXIT_FAILURE);
+        epicsExit(EXIT_FAILURE);
     }
     
     softIoc_registerRecordDeviceDriver(pdbbase);
     registryFunctionAdd("exit", (REGISTRYFUNCTION) exitSubroutine);
 
     while (argc>1 && **argv == '-') {
-    switch ((*argv)[1]) {
-    case 'a':
-        if (macros) asSetSubstitutions(macros);
-        asSetFilename(*++argv);
-        --argc;
-        break;
-    
-    case 'd':
-        if (dbLoadRecords(*++argv, macros)) {
-        epicsExit(EXIT_FAILURE);
+        switch ((*argv)[1]) {
+            case 'a':
+                if (macros) asSetSubstitutions(macros);
+                asSetFilename(*++argv);
+                --argc;
+                break;
+
+            case 'd':
+                if (dbLoadRecords(*++argv, macros)) {
+                    epicsExit(EXIT_FAILURE);
+                }
+                loadedDb = 1;
+                --argc;
+                break;
+
+            case 'h':
+                usage(EXIT_SUCCESS);
+
+            case 'm':
+                macros = *++argv;
+                --argc;
+                break;
+
+            case 'S':
+                startIocsh = 0;
+                break;
+
+            case 's':
+                break;
+
+            case 'x':
+                epicsSnprintf(xmacro, sizeof xmacro, "IOC=%s", *++argv);
+                if (dbLoadRecords(exit_file, xmacro)) {
+                    epicsExit(EXIT_FAILURE);
+                }
+                loadedDb = 1;
+                --argc;
+                break;
+
+            default:
+                printf("%s: option '%s' not recognized\n", arg0, *argv);
+                usage(EXIT_FAILURE);
         }
-        loadedDb = 1;
         --argc;
-        break;
-    
-    case 'h':
-        usage(EXIT_SUCCESS);
-    
-    case 'm':
-        macros = *++argv;
-        --argc;
-        break;
-    
-    case 'S':
-        startIocsh = 0;
-        break;
-    
-    case 's':
-        break;
-    
-    case 'x':
-        epicsSnprintf(xmacro, sizeof xmacro, "IOC=%s", *++argv);
-        if (dbLoadRecords(exit_db, xmacro)) {
-        epicsExit(EXIT_FAILURE);
-        }
-        loadedDb = 1;
-        --argc;
-        break;
-    
-    default:
-        printf("%s: option '%s' not recognized\n", arg0, *argv);
-        usage(EXIT_FAILURE);
-    }
-    --argc;
-    ++argv;
+        ++argv;
     }
     
     if (argc>0 && **argv=='-') {
-    switch((*argv)[1]) {
-    case 'a':
-    case 'd':
-    case 'm':
-    case 'x':
-        printf("%s: missing argument to option '%s'\n", arg0, *argv);
-        usage(EXIT_FAILURE);
-    
-    case 'h':
-        usage(EXIT_SUCCESS);
-    
-    case 'S':
-        startIocsh = 0;
-        break;
-    
-    case 's':
-        break;
-    
-    default:
-        printf("%s: option '%s' not recognized\n", arg0, *argv);
-        usage(EXIT_FAILURE);
-    }
-    --argc;
-    ++argv;
+        switch((*argv)[1]) {
+            case 'a':
+            case 'd':
+            case 'm':
+            case 'x':
+                printf("%s: missing argument to option '%s'\n", arg0, *argv);
+                usage(EXIT_FAILURE);
+
+            case 'h':
+                usage(EXIT_SUCCESS);
+
+            case 'S':
+                startIocsh = 0;
+                break;
+
+            case 's':
+                break;
+
+            default:
+                printf("%s: option '%s' not recognized\n", arg0, *argv);
+                usage(EXIT_FAILURE);
+        }
+        --argc;
+        ++argv;
     }
     
     if (loadedDb) {
-    iocInit();
-    epicsThreadSleep(0.2);
+        iocInit();
+        epicsThreadSleep(0.2);
     }
     
     /* run user's startup script */
     if (argc>0) {
-    if (iocsh(*argv)) epicsExit(EXIT_FAILURE);
-    epicsThreadSleep(0.2);
-    loadedDb = 1;    /* Give it the benefit of the doubt... */
+        if (iocsh(*argv)) {
+            epicsExit(EXIT_FAILURE);
+        }
+        epicsThreadSleep(0.2);
+        loadedDb = 1;    /* Give it the benefit of the doubt... */
     }
     
     /* start an interactive shell if it was requested */
     if (startIocsh) {
-    iocsh(NULL);
+        iocsh(NULL);
     } else {
-    if (loadedDb) {
-        epicsThreadExitMain();
-    } else {
-        printf("%s: Nothing to do!\n", arg0);
-        usage(EXIT_FAILURE);
+        if (loadedDb) {
+            epicsThreadExitMain();
+        } else {
+            printf("%s: Nothing to do!\n", arg0);
+            usage(EXIT_FAILURE);
+        }
     }
-    }
+
     epicsExit(EXIT_SUCCESS);
+
     /*Note that the following statement will never be executed*/
     return 0;
 }
