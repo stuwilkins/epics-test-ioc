@@ -59,6 +59,7 @@
 #include <stdio.h>
 
 #include "registryFunction.h"
+#include "envDefs.h"
 #include "epicsThread.h"
 #include "epicsExit.h"
 #include "epicsStdio.h"
@@ -77,6 +78,8 @@ extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
 #define DB_BASE "/db"
 #define DBD_FILE "/dbd/softIoc.dbd"
 #define EXIT_FILE DB_BASE "/softIocExit.db"
+
+#define EPICS_ENV_TOP "TOP"
 
 const char *arg0;
 const char *default_dbd_file = DBD_FILE;
@@ -144,6 +147,9 @@ int main(int argc, char *argv[])
     if (dbLoadDatabase(dbd_file, NULL, NULL)) {
         epicsExit(EXIT_FAILURE);
     }
+
+    // Set the top (can be overridden in st.cmd)
+    epicsEnvSet(EPICS_ENV_TOP, topp);
     
     softIoc_registerRecordDeviceDriver(pdbbase);
     registryFunctionAdd("exit", (REGISTRYFUNCTION) exitSubroutine);
